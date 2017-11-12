@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "archiver": "^2.1.0",
+    "body-parser": "^1.18.2",
     "busboy": "^0.2.14",
     "csvtojson": "^1.1.9",
     "express": "^4.16.2",

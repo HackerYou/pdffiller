@@ -20,29 +20,82 @@ app.uploadFile = (files,type) => {
     });
 };
 
+app.buildLists = (content) => {
+    //Build a list with all the pdf fields
+    //For each feild put a dataset in there that contains the 
+    //csv header info.
+    const ul = document.createElement('ul');
+    ul.classList.add('field-list');
+    const pdf = content.pdf;
+    const csv = content.csv;
+    const buildBtn = document.createElement('button');
+    buildBtn.innerHTML = "Build PDF's";
+
+    pdf.forEach(el => {
+        const li = document.createElement('li');
+        li.dataset.fieldName = el; 
+        li.innerHTML = `
+            <p>${el}</p>
+            <input list="${el}"/>
+            <datalist id="${el}">
+                ${csv.map(option => `
+                    <option value="${option.trim()}"/>
+                `).join('')}
+            </datalist>
+        `;
+        ul.appendChild(li);
+    }); 
+    const form = selectElm('.fields form');
+    form.appendChild(ul);
+    form.appendChild(buildBtn);
+
+};
+
 app.events = () => {
-    selectElm('.csv-form')
+    selectElm('.file-form')
         .addEventListener('submit', function(e) {
             e.preventDefault();
-            const files = this.csv.files;
-            if(files.length > 0) {
-                app.uploadFile(files[0],'csv')
-                    .then((res) => {
-                        console.log(res);
+            const csvFiles = this.csv.files;
+            const pdfFiles = this.pdf.files;
+            if(csvFiles.length > 0 && pdfFiles.length > 0) {
+                $.when(
+                    app.uploadFile(csvFiles[0], 'csv'), 
+                    app.uploadFile(pdfFiles[0], 'pdf')
+                ).then((csv,pdf) => {
+                    app.buildLists({
+                        csv: csv[0].headers,
+                        pdf: pdf[0].fields
                     });
+                });
             }
         });
-    selectElm('.pdf-form')
+
+    selectElm('.build-form')
         .addEventListener('submit', function(e) {
             e.preventDefault();
-            const files = this.pdf.files;
-            if(files.length > 0) {
-                app.uploadFile(files[0],'pdf')
-                    .then((res) => {
-                        console.log(res);
-                    });
-            }
+            //Get all the li and the data from them
+            const fieldMatch = {};
+            selectElm('.field-list li')
+                .forEach(el => {
+                    fieldMatch[el.dataset.fieldName] = el.querySelector('input').value;
+                })
+
+            //Create and object to send to the api 
+            $.ajax({
+                url: '/api/create',
+                method: 'POST',
+                headers: {
+                    'Accept' : 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(fieldMatch)
+            })
+            .then((res) => {
+                window.open(`${location.origin}/api/downlload?file=${res.fileName.replace('./','')}`,'_blank'); 
+            });
+
         });
+   
 };
 
 app.init = () => {
