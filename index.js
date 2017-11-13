@@ -36,13 +36,12 @@ app.post('/api/csv',(req,res) => {
             fileBuffer.write(buffer);
         });
         file.on('end',() => {
-            req.session.save(() => {
-                console.log('CSV Session saved');
-                console.log(req.session);
+            req.session.save((err) => {
                 utils.getCSVHeaders(tmpFileName)
                     .then(headers => {
                         res.send({
-                            headers
+                            headers,
+                            csvFile: tmpFileName
                         });
                     });
             });
@@ -62,13 +61,12 @@ app.post('/api/pdf',(req,res) => {
             fileBuffer.write(buffer);
         });
         file.on('end', () => {
-            req.session.save(() => {
-                console.log('PDF session saved');
-                console.log(req.session);
+            req.session.save((err) => {
                 utils.getPDFFieldNames(tmpFileName)
                     .then(fields => {
                         res.send({
-                            fields
+                            fields,
+                            pdfFile: tmpFileName
                         });
                     });
             });      
@@ -78,10 +76,9 @@ app.post('/api/pdf',(req,res) => {
 });
 
 app.post('/api/create', (req,res) => {
-    const fields = req.body;
-    utils.buildPdfs(req.session.csv,req.session.pdf,fields,req.sessionID)
-        .then((zipFile) => {  
-            console.log(zipFile);          
+    const { fields, fileNames } = req.body;
+    utils.buildPdfs(fileNames.csv,fileNames.pdf,fields,req.sessionID)
+        .then((zipFile) => {            
             res.send({
                 success:'File created',
                 fileName: zipFile
@@ -90,8 +87,10 @@ app.post('/api/create', (req,res) => {
 });
 
 app.get('/api/download',(req,res) => {
-    console.log(req.query.file);
-    res.download(`${req.query.file}`);
+    res.download(`${req.query.file}`,() => {
+        //Clean up all files
+        utils.removeDownloadFiles(req.query.file,req.sessionID);
+    });
 });
 
 app.listen(3800);

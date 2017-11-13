@@ -31,7 +31,6 @@ const zipUp = (folder) => {
     
         output.on('data', console.log);
         output.on('close', () => {
-            console.log('all done')
             resolve(`${folder}.zip`);
         });
 
@@ -90,7 +89,6 @@ exports.getPDFFieldNames = (pdf) => {
 };
 
 exports.buildPdfs = (csvFile, pdfFile, fields,sessionID) => {
-    console.log(csvFile,pdfFile,fields);
     return new Promise((resolve,reject) => {
         const dirPath = `${path.resolve()}/tmp/${sessionID}_output`;
         if(!fs.existsSync(dirPath)) {
@@ -123,9 +121,24 @@ exports.buildPdfs = (csvFile, pdfFile, fields,sessionID) => {
                 Promise.all(pdfs)
                     .then(() => {
                         zipUp(`./tmp/${sessionID}_output`)
-                            .then(resolve)
+                            .then(async (fileName) => {
+                                await cleanUp([csvFile,pdfFile]);
+                                resolve(fileName);
+                            })
                             .catch(reject);
                     });
             });
     });
+};
+
+exports.removeDownloadFiles = async (zipPath,sessionID) => {
+    const dir = zipPath.replace('.zip', '');
+    //Remove Zip file
+    await cleanUp([zipPath]);
+    //Remove folder
+    fs.readdir(dir,async (err,files) => {
+        await cleanUp(files.map(file => `${path.resolve()}/tmp/${sessionID}_output/${file}`));
+        fs.rmdirSync(dir);
+    });
+
 };

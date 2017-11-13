@@ -1,4 +1,8 @@
 const app = {};
+app.fileNames = {
+    pdf: '',
+    csv: ''
+};
 
 function selectElm(selector) {
     const selection = document.querySelectorAll(selector);
@@ -11,6 +15,7 @@ function selectElm(selector) {
 app.uploadFile = (files,type) => {
     const formData = new FormData();
     formData.append(type,files);
+    pubsub.publish('LOADING','');
     return $.ajax({
         url: `/api/${type}`,
         method: 'POST',
@@ -28,14 +33,15 @@ app.buildLists = (content) => {
     ul.classList.add('field-list');
     const pdf = content.pdf;
     const csv = content.csv;
-    const buildBtn = document.createElement('button');
-    buildBtn.innerHTML = "Build PDF's";
+    const buildBtn = document.createElement('input');
+    buildBtn.setAttribute('type','submit');
+    buildBtn.value = "Build PDF's";
 
     pdf.forEach(el => {
         const li = document.createElement('li');
         li.dataset.fieldName = el; 
         li.innerHTML = `
-            <p>${el}</p>
+            <p><strong>Field Name:</strong> ${el}</p>
             <input list="${el}"/>
             <datalist id="${el}">
                 ${csv.map(option => `
@@ -48,6 +54,8 @@ app.buildLists = (content) => {
     const form = selectElm('.fields form');
     form.appendChild(ul);
     form.appendChild(buildBtn);
+    selectElm('.fields')
+        .classList.add('show');
 
 };
 
@@ -57,11 +65,16 @@ app.events = () => {
             e.preventDefault();
             const csvFiles = this.csv.files;
             const pdfFiles = this.pdf.files;
-            if(csvFiles.length > 0 && pdfFiles.length > 0) {
+            if(csvFiles.length > 0 && pdfFiles.length > 0) {                
                 $.when(
                     app.uploadFile(csvFiles[0], 'csv'), 
                     app.uploadFile(pdfFiles[0], 'pdf')
                 ).then((csv,pdf) => {
+                    pubsub.publish('DONE_LOADING', '');                    
+                    app.fileNames = {
+                        pdf: pdf[0].pdfFile,
+                        csv: csv[0].csvFile
+                    };
                     app.buildLists({
                         csv: csv[0].headers,
                         pdf: pdf[0].fields
@@ -79,8 +92,13 @@ app.events = () => {
                 .forEach(el => {
                     fieldMatch[el.dataset.fieldName] = el.querySelector('input').value;
                 })
-
+        
+            const request = {
+                fields: fieldMatch,
+                fileNames: app.fileNames
+            };
             //Create and object to send to the api 
+            pubsub.publish('LOADING', '');            
             $.ajax({
                 url: '/api/create',
                 method: 'POST',
@@ -88,13 +106,24 @@ app.events = () => {
                     'Accept' : 'application/json',
                     'Content-Type': 'application/json'
                 },
-                data: JSON.stringify(fieldMatch)
+                data: JSON.stringify(request)
             })
             .then((res) => {
-                window.open(`${location.origin}/api/downlload?file=${res.fileName.replace('./','')}`,'_blank'); 
+                pubsub.publish('DONE_LOADING', '');
+                window.open(`${location.origin}/api/download?file=${res.fileName.replace('./','')}`,'_blank'); 
             });
 
         });
+
+    pubsub.subscribe('LOADING', () => {
+        selectElm('.loading')
+            .classList.add('show');
+    });
+
+    pubsub.subscribe('DONE_LOADING', () => {
+        selectElm('.loading')
+            .classList.remove('show');
+    });
    
 };
 
