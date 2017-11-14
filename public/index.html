@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="https://use.fontawesome.com/600bf75a66.js"></script>
+    <link rel="stylesheet" href="styles/style.css">
+    <title>Fillsimple</title>
+</head>
+<body>
+    <header class="main-header">
+        <i class="fa fa-file" aria-hidden="true"></i>
+        <h1>Fillsimple</h1>
+    </header>   
+    <main>
+        <section class="forms">
+            <form class="file-form">
+                <div class="upload-form">
+                    <h2>CSV File</h2>
+                    <p><em>Add your csv file WITH headers here.</em></p>
+                    <input type="file" name="csv">
+                </div>
+                <div class="upload-form">
+                    <h2>PDF Form</h2>
+                    <p><em>Add your PDF with feild names included.</em></p>
+                    <input type="file" name="pdf">
+                </div>
+                <input type="submit" value="Upload">
+            </form>
+        </section>
+        <section class="fields">
+            <p>Match the <strong>PDF</strong> form fields on the left with the <strong>CSV</strong> columns on the right.</p>
+            <form class="build-form"></form>
+        </section>
+        <div class="loading">
+            <p>LOADING</p>
+        </div>
+    </main>
+    <footer class="main-footer">
+        <p>Fillsimple</p>
+        <p>No files are stored on the site after download.</p>
+    </footer>
+    <script src='https://code.jquery.com/jquery-3.2.1.min.js' integrity='sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4='crossorigin='anonymous'></script>
+    <script src="js/pubsub.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>
