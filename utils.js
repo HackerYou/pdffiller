@@ -6,8 +6,6 @@ const path = require('path');
 const { spawn } = require('child_process');
 const archiver = require('archiver');
 
-const normalizeName = name => name.toLowerCase().replace(' ', '_');
-
 const createPdf = (data,dest,tempFdfName) => {
     return new Promise((resolve,reject) => {
         const formData = fdf.generate(data);
@@ -15,7 +13,7 @@ const createPdf = (data,dest,tempFdfName) => {
             if (err) reject();
             // pdftk form.pdf fill_form data.fdf output form_final.pdf flatten
             const pdftk = spawn('pdftk', [dest,'fill_form',tempFdfName,'output', `${dest.replace('.pdf','_filled.pdf')}`,'flatten']);
-            pdftk.on('close',() => {
+            pdftk.on('exit',() => {
                 resolve();
             });
         });
