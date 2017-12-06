@@ -13,7 +13,8 @@ const createPdf = (data,dest,tempFdfName) => {
             if (err) reject();
             // pdftk form.pdf fill_form data.fdf output form_final.pdf flatten
             const pdftk = spawn('pdftk', [dest,'fill_form',tempFdfName,'output', `${dest.replace('.pdf','_filled.pdf')}`,'flatten']);
-            pdftk.on('exit',() => {
+
+            pdftk.on('close',(code) => {
                 resolve();
             });
         });
@@ -51,6 +52,40 @@ const cleanUp = (files) => {
         });
     });
     return Promise.all(deletedFiles);
+};
+
+const splitArray = (array,limit) => {
+    //Input array [1,2,3,4,5,6,7,8]
+    //Output
+    // [
+    //     [1,2,3]
+    //     [4,5,6]
+    //     [7,8]
+    // ]
+    const newArray = [];
+    while(array.length > 0) {
+        newArray.push(array.splice(0,limit))
+    }
+    return newArray;
+}
+
+
+const batchBuild = (data,pdfFile) => {
+    //For the data, batch the calls based on
+    const batches = splitArray(data,3);
+
+    return batches.map((smallBatch) => {
+        return new Promise((resolve,reject) => {
+            Promise.all(smallBatch.map((file) => new Promise(async (resolve) =>{ 
+                await fse.copy(pdfFile,file.destinationPdf);
+                await createPdf(file.data, file.destinationPdf, file.tempFdfName);
+                await cleanUp([file.destinationPdf,file.tempFdfName]);
+                resolve();
+            })))
+            .then(resolve)
+            .catch(reject);
+        });
+    });
 };
 
 exports.getCSVHeaders = (csv) => {
@@ -94,28 +129,27 @@ exports.buildPdfs = (csvFile, pdfFile, fields,sessionID) => {
         }
     
         const pdfs = [];
-    
+        const fileData = [];
         csvToJson()
             .fromFile(csvFile)
             .on('json', (data) => {
-                pdfs.push(new Promise(async (res,rej) => {
-                    const mappedFields = {};
-                    for(let key in fields) {
-                        mappedFields[key] = data[fields[key]]
-                    }
-                    const fileName = Object.keys(mappedFields)[0];
-                    const destinationPdf = `${dirPath}/${mappedFields[fileName]}.pdf`;
-                    const tempFdfName = `${dirPath}/${mappedFields[fileName].toLowerCase().replace(' ', '_')}.fdf`;
-        
-                    await fse.copy(pdfFile,destinationPdf);
-    
-                    await createPdf(mappedFields, destinationPdf, tempFdfName);
-        
-                    await cleanUp([destinationPdf,tempFdfName]);
-                    res();
-                }));
+                const mappedFields = {};
+                for(let key in fields) {
+                    mappedFields[key] = data[fields[key]]
+                }
+                const fileName = Object.keys(mappedFields)[0];
+                const destinationPdf = `${dirPath}/${mappedFields[fileName]}.pdf`;
+                const tempFdfName = `${dirPath}/${mappedFields[fileName].toLowerCase().replace(' ', '_')}.fdf`;
+                fileData.push({
+                    data: mappedFields,
+                    fileName,
+                    destinationPdf,
+                    tempFdfName
+                });
             })
             .on('done',(err) => {
+                const pdfs = batchBuild(fileData,pdfFile);
+                console.log(pdfs)
                 Promise.all(pdfs)
                     .then(() => {
                         zipUp(`./tmp/${sessionID}_output`)
@@ -124,7 +158,8 @@ exports.buildPdfs = (csvFile, pdfFile, fields,sessionID) => {
                                 resolve(fileName);
                             })
                             .catch(reject);
-                    });
+                    })
+                    .catch(console.log);
             });
     });
 };
