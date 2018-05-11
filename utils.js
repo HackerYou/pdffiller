@@ -77,22 +77,7 @@ const batchBuild = (data,pdfFile) => {
             await createPdf(file.data, file.destinationPdf, file.tempFdfName);
             await cleanUp([file.destinationPdf, file.tempFdfName]);
         });
-    }, Promise.resolve())
-
-
-
-    // return batches.map((smallBatch) => {
-    //     return new Promise((resolve,reject) => {
-    //         Promise.all(smallBatch.map((file) => new Promise(async (resolve) =>{ 
-    //             await fse.copy(pdfFile,file.destinationPdf);
-    //             await createPdf(file.data, file.destinationPdf, file.tempFdfName);
-    //             await cleanUp([file.destinationPdf,file.tempFdfName]);
-    //             resolve();
-    //         })))
-    //         .then(resolve)
-    //         .catch(reject);
-    //     });
-    // });
+    }, Promise.resolve());
 };
 
 exports.getCSVHeaders = (csv) => {
