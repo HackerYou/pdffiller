@@ -93,4 +93,6 @@ app.get('/api/download',(req,res) => {
     });
 });
 
-app.listen(3800);
+app.listen(3800, () => {
+    console.log('server listening on port 3800')
+});

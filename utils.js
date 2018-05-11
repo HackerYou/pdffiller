@@ -71,21 +71,28 @@ const splitArray = (array,limit) => {
 
 
 const batchBuild = (data,pdfFile) => {
-    //For the data, batch the calls based on
-    const batches = splitArray(data,3);
-
-    return batches.map((smallBatch) => {
-        return new Promise((resolve,reject) => {
-            Promise.all(smallBatch.map((file) => new Promise(async (resolve) =>{ 
-                await fse.copy(pdfFile,file.destinationPdf);
-                await createPdf(file.data, file.destinationPdf, file.tempFdfName);
-                await cleanUp([file.destinationPdf,file.tempFdfName]);
-                resolve();
-            })))
-            .then(resolve)
-            .catch(reject);
+    return data.reduce((p,file) => {
+        return p.then(async () => {
+            await fse.copy(pdfFile, file.destinationPdf);
+            await createPdf(file.data, file.destinationPdf, file.tempFdfName);
+            await cleanUp([file.destinationPdf, file.tempFdfName]);
         });
-    });
+    }, Promise.resolve())
+
+
+
+    // return batches.map((smallBatch) => {
+    //     return new Promise((resolve,reject) => {
+    //         Promise.all(smallBatch.map((file) => new Promise(async (resolve) =>{ 
+    //             await fse.copy(pdfFile,file.destinationPdf);
+    //             await createPdf(file.data, file.destinationPdf, file.tempFdfName);
+    //             await cleanUp([file.destinationPdf,file.tempFdfName]);
+    //             resolve();
+    //         })))
+    //         .then(resolve)
+    //         .catch(reject);
+    //     });
+    // });
 };
 
 exports.getCSVHeaders = (csv) => {
@@ -149,8 +156,7 @@ exports.buildPdfs = (csvFile, pdfFile, fields,sessionID) => {
             })
             .on('done',(err) => {
                 const pdfs = batchBuild(fileData,pdfFile);
-                console.log(pdfs)
-                Promise.all(pdfs)
+                pdfs
                     .then(() => {
                         zipUp(`./tmp/${sessionID}_output`)
                             .then(async (fileName) => {
